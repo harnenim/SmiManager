@@ -8,6 +8,10 @@
     user-select: none;
     -ms-user-select: none;
 }
+html, body {
+    width: 100%;
+    height: 100%;
+}
 ol, ul {
     list-style: none;
 }
@@ -18,9 +22,10 @@ ol, ul {
 
 input, textarea {
     background: #fff;
+    white-space: pre;
     user-select: auto;
     -ms-user-select: auto;
 }
 input, textarea, button {
-    border: 1px solid #000;
+    border: 1px solid #888;
 }

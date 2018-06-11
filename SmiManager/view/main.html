@@ -1,0 +1,464 @@
+﻿<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Smi Manager</title>
+    <script src="js/jquery-3.2.1.min.js"></script>
+    <script src="js/common.js"></script>
+    <script>
+        var tab = {};
+        function initMain() {
+            tab.head = $("#tabHead");
+            tab.body = $("#tabBody");
+            tab.btnAddTab = $("#btnAddTab");
+            tab.tabHeadEnd = $("#tabHeadEnd");
+            tab.addTabLayer = $("#addTabLayer");
+
+            var t = tab.head.find(".tab:eq(0)");
+            tab.preset = {};
+            tab.preset.head = t.clone().removeClass("selected");
+            tab.head.empty();
+            tab.head.append(tab.btnAddTab);
+            tab.head.append(tab.tabHeadEnd);
+
+            tab.preset.body = {};
+            tab.body.children().each(function () {
+                var preset = $(this).clone();
+                tab.preset.body[preset.attr("name")] = preset;
+            });
+            tab.body.empty();
+
+            tab.resizeBody = function () {
+                tab.body.css("height", "calc(100% - " + tab.head.height() + "px)");
+            };
+
+            tab.btnAddTab.on("click", function () {
+                tab.addTabLayer.show();
+            });
+            tab.count = 0;
+            tab.addTabLayer.on("click", "button[type=button]", function () {
+                var btn = $(this);
+                var name = btn.attr("name");
+                if (!tab.preset.body[name]) {
+                    alert("미구현");
+                    return;
+                }
+                var number = ++tab.count;
+                var th = tab.preset.head.clone().attr("id", "th" + number).text(name + " " + number);
+                var tb = tab.preset.body[name].clone().attr("id", "tb" + number);
+                tab.head.append(th);
+                tab.head.append(tab.btnAddTab);
+                tab.head.append(tab.tabHeadEnd);
+                tab.body.append(tb);
+                th.click();
+                tab.resizeBody();
+                tab.addTabLayer.hide();
+            });
+            tab.head.on("click", ".tab", function () {
+                var th = $(this);
+                tab.head.find(".tab").removeClass("selected");
+                th.addClass("selected");
+                tab.body.find(".tab").hide();
+                tab.body.find("#tb" + th.attr("id").substring(2)).show();
+            });
+            $("#btnCancelAddTab").on("click", function () {
+                tab.addTabLayer.hide();
+            });
+
+            tab.body.on("click", "button", function () {
+                var classes = $(this).attr("class").split(" ");
+                for (var i = 0, c; (c = classes[i]); i++) {
+                    if (c.substring(0, 3) === "btn") {
+                        var id = $(this).parent().attr("id");
+                        try {
+                            window.external[c.substring(3)](id);
+                            break;
+                        } catch (e) {
+                            alert("미구현");
+                        }
+                    }
+                }
+            });
+
+            tab.body.on("keyup", ".tab[name=fusion] textarea", function () {
+                var textarea = $(this);
+                var lineHeight = Number(textarea.css("line-height").split("px")[0]);
+                textarea.css("height", (lineHeight * textarea.val().split("\n").length) + "px");
+            });
+
+            window.onresize = function () { tab.resizeBody(); };
+
+            $("button[name=combine]").click();
+        }
+        //$(initMain);
+    </script>
+    <link rel="stylesheet" type="text/css" href="css/common.css" />
+    <style>
+        #tabHead {
+            width: 100%;
+            background: #eee;
+        }
+
+        #tabBody {
+            width: 100%;
+            height: calc(100% - 30px);
+            background: #ddd;
+        }
+
+        #tabHead > div {
+            float: left;
+            height: 14px;
+            padding: 8px;
+        }
+
+        #tabHead > .tab {
+            width: 160px;
+            background: #fff;
+            cursor: pointer;
+        }
+
+            #tabHead > .tab.selected,
+            #tabHead > .tab:hover,
+            #tabHead > #btnAddTab:hover {
+                background: #CCE8FF;
+            }
+
+        #tabHead > #btnAddTab {
+            width: 14px;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        #tabHead > #tabHeadEnd {
+            float: none;
+            clear: both;
+            height: 0;
+            padding: 0;
+        }
+
+        #addTabLayer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(127,127,127,0.5);
+        }
+
+        #addTabMenu {
+            position: absolute;
+            top: calc(50% - 160px);
+            left: calc(50% - 100px);
+            width: 200px;
+            height: 320px;
+            background: #fff;
+        }
+
+            #addTabMenu > button {
+                width: 180px;
+                height: 40px;
+                margin: 10px;
+                border: 0;
+                cursor: pointer;
+                display: block;
+                background: #ddd;
+            }
+
+                #addTabMenu > button:hover {
+                    background: #CCE8FF;
+                }
+
+            #addTabMenu > #btnCancelAddTab {
+                margin-top: 20px;
+            }
+
+        #tabBody > div {
+            width: 100%;
+            height: 100%;
+            background: #fff;
+        }
+
+            #tabBody > div.tab {
+                position: relative;
+            }
+
+                #tabBody > div.tab[name=fillSync] textarea {
+                    position: absolute;
+                    top: 0;
+                    width: calc(50% - 10px);
+                    height: 100%;
+                    border: 0;
+                }
+
+                    #tabBody > div.tab[name=fillSync] textarea.input {
+                        left: 0;
+                    }
+
+                    #tabBody > div.tab[name=fillSync] textarea.output {
+                        left: calc(50% + 10px);
+                    }
+
+                #tabBody > div.tab[name=fillSync] .btnFillSync {
+                    position: absolute;
+                    top: 0;
+                    left: calc(50% - 10px);
+                    width: 20px;
+                    height: 100%;
+                }
+
+                #tabBody > div.tab[name=normalizer] textarea {
+                    position: absolute;
+                    top: 0;
+                    width: calc(50% - 10px);
+                    height: 100%;
+                    border: 0;
+                }
+
+                    #tabBody > div.tab[name=normalizer] textarea.input {
+                        left: 0;
+                    }
+
+                    #tabBody > div.tab[name=normalizer] textarea.output {
+                        left: calc(50% + 10px);
+                    }
+
+                #tabBody > div.tab[name=normalizer] .btnNormalize {
+                    position: absolute;
+                    top: 0;
+                    left: calc(50% - 10px);
+                    width: 20px;
+                    height: 100%;
+                }
+
+                #tabBody > div.tab[name=fusion] div.scroll {
+                    position: relative;
+                    width: 100%;
+                    height: 100%;
+                    overflow-y: scroll;
+                }
+
+                #tabBody > div.tab[name=fusion] textarea {
+                    position: absolute;
+                    top: 0;
+                    width: 30%;
+                    min-height: 100%;
+                    border-width: 0;
+                    line-height: 15px;
+                    overflow: hidden;
+                }
+
+                    #tabBody > div.tab[name=fusion] textarea.inputText {
+                        left: 30%;
+                        border-left-width: 1px;
+                        line-height: 30px;
+                        padding-top: 8px;
+                        min-height: calc(100% - 8px);
+                    }
+
+                    #tabBody > div.tab[name=fusion] textarea.output {
+                        left: calc(60% + 21px);
+                        width: calc(40% - 21px);
+                    }
+
+                #tabBody > div.tab[name=fusion] .btnFusion {
+                    position: fixed;
+                    top: 30px;
+                    left: calc(60% - 9px);
+                    width: 20px;
+                    height: calc(100% - 30px);
+                }
+
+                #tabBody > div.tab[name=combine] textarea {
+                    position: absolute;
+                    width: calc(50% - 10px);
+                    border-width: 0;
+                }
+                    #tabBody > div.tab[name=combine] textarea.inputUpper {
+                        top: 0;
+                        left: 0;
+                        height: calc(50% - 1px);
+                        border-bottom-width: 1px;
+                    }
+                    #tabBody > div.tab[name=combine] textarea.inputLower {
+                        top: 50%;
+                        left: 0;
+                        height: 50%;
+                    }
+                    #tabBody > div.tab[name=combine] textarea.output {
+                        top: 0;
+                        left: calc(50% + 10px);
+                        height: 100%;
+                    }
+                #tabBody > div.tab[name=combine] button.btnCombine {
+                    position: absolute;
+                    top: 0;
+                    left: calc(50% - 10px);
+                    width: 20px;
+                    height: 100%;
+                }
+    </style>
+</head>
+<body>
+    <div id="tabHead">
+        <div class="tab selected">탭1</div>
+        <div id="btnAddTab">＋</div>
+        <div id="tabHeadEnd"></div>
+    </div>
+    <div id="tabBody">
+        <div class="tab" name="fillSync">
+            <textarea class="input">&lt;Sync Start=61379&gt;&lt;P Class=KRCC&gt;
+&lt;font color="#cccc88"&gt;I&lt;/font&gt;&lt;font color="#997722"&gt;n the dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In&lt;/font&gt;&lt;font color="#997722"&gt;the dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;Sync Start=61687&gt;&lt;P Class=KRCC&gt;
+&lt;font color="#cccc88"&gt;In t&lt;/font&gt;&lt;font color="#997722"&gt;he dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In th&lt;/font&gt;&lt;font color="#997722"&gt;e dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In the&lt;/font&gt;&lt;font color="#997722"&gt;dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;Sync Start=61957&gt;&lt;P Class=KRCC&gt;
+&lt;font color="#cccc88"&gt;In the d&lt;/font&gt;&lt;font color="#997722"&gt;reaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In the dr&lt;/font&gt;&lt;font color="#997722"&gt;eaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In the dre&lt;/font&gt;&lt;font color="#997722"&gt;aming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In the drea&lt;/font&gt;&lt;font color="#997722"&gt;ming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;Sync Start=62595&gt;&lt;P Class=KRCC&gt;
+&lt;font color="#cccc88"&gt;In the dream&lt;/font&gt;&lt;font color="#997722"&gt;ing 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In the dreami&lt;/font&gt;&lt;font color="#997722"&gt;ng 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In the dreamin&lt;/font&gt;&lt;font color="#997722"&gt;g 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In the dreaming&lt;/font&gt;&lt;font color="#997722"&gt;誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;Sync Start=63710&gt;&lt;P Class=KRCC&gt;
+</textarea>
+            <button class="btnFillSync">＞</button>
+            <textarea class="output"></textarea>
+        </div>
+        <div class="tab" name="normalizer">
+            <textarea class="input">&lt;Sync Start=1000&gt;&lt;P Class=KRCC&gt;
+asdf
+&lt;Sync Start=1250&gt;&lt;P Class=KRCC &gt;
+가&lt;font color="#abcdef"&gt;나&lt;/font&gt;다&lt;font color="#9abcde" fade="in"&gt;라&lt;/font&gt;마&lt;font color="#89abcd" fade="out"&gt;바&lt;/font&gt;사
+&lt;Sync Start=1500&gt;&lt;P Class=KRCC &gt;
+가&lt;font color="#abcdef"&gt;나&lt;/font&gt;다&lt;font color="#9abcde"&gt;라&lt;/font&gt;마&lt;font color="#000000"&gt;바&lt;/font&gt;사
+</textarea>
+            <button class="btnNormalize">＞</button>
+            <textarea class="output"></textarea>
+        </div>
+        <div class="tab" name="fusion">
+            <div class="scroll">
+                <textarea class="inputSync">&lt;Sync Start=100&gt;&lt;P Class=KRCC&gt;
+가
+&lt;Sync Start=200&gt;&lt;P Class=KRCC&gt;
+나
+&lt;Sync Start=300&gt;&lt;P Class=KRCC&gt;
+다
+&lt;Sync Start=400&gt;&lt;P Class=KRCC&gt;
+라
+&lt;Sync Start=500&gt;&lt;P Class=KRCC&gt;
+마
+&lt;Sync Start=600&gt;&lt;P Class=KRCC&gt;
+바
+&lt;Sync Start=700&gt;&lt;P Class=KRCC&gt;
+사</textarea>
+                <textarea class="inputText">아
+자
+차
+카
+타
+파
+하</textarea>
+                <textarea class="output"></textarea>
+            </div>
+            <button type="button" class="btnFusion">＞</button>
+        </div>
+        <div class="tab" name="combine">
+            <textarea class="inputUpper">&lt;Sync Start=589368&gt;&lt;P Class=KRCC&gt;
+노래하지 마!
+&lt;Sync Start=590777&gt;&lt;P Class=KRCC&gt;
+&amp;nbsp;
+&lt;Sync Start=597997&gt;&lt;P Class=KRCC&gt;
+현혹되지 마라&lt;br&gt;룬으로 느껴라!
+&lt;Sync Start=600437&gt;&lt;P Class=KRCC&gt;
+&amp;nbsp;
+&lt;Sync Start=620892&gt;&lt;P Class=KRCC&gt;
+프레이야
+&lt;Sync Start=621974&gt;&lt;P Class=KRCC &gt;
+&amp;nbsp;
+&lt;Sync Start=623620&gt;&lt;P Class=KRCC&gt;
+괜찮아? 미라미라
+&lt;Sync Start=625292&gt;&lt;P Class=KRCC&gt;
+혼자 설 수 있겠어?
+&lt;Sync Start=626854&gt;&lt;P Class=KRCC &gt;
+&amp;nbsp;
+&lt;Sync Start=628340&gt;&lt;P Class=KRCC&gt;
+당연하지
+&lt;Sync Start=629444&gt;&lt;P Class=KRCC&gt;
+&amp;nbsp;
+&lt;Sync Start=645212&gt;&lt;P Class=KRCC&gt;
+산개해서 각자 쫓아라!
+&lt;Sync Start=647353&gt;&lt;P Class=KRCC&gt;
+유적의 폴드 에너지가&lt;br&gt;급속히 활성화
+&lt;Sync Start=650396&gt;&lt;P Class=KRCC&gt;
+발퀴레의 폴드파에&lt;br&gt;감응하는 것 같습니다
+&lt;Sync Start=653044&gt;&lt;P Class=KRCC &gt;
+&amp;nbsp;</textarea>
+            <textarea class="inputLower">&lt;Sync Start=579908&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;서로 눈이 맞고 사랑을 하고&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=582972&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;정신없이 뒤쫓아가고&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=585940&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;그래도 더 자세히 알고 싶어서&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=588316&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;활활 불타올라&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=590924&gt;&lt;P Class=KRCC&gt;
+&amp;nbsp;
+&lt;Sync Start=591892&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;원할수록 의문이 늘고&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=594806&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;생각할수록 열이 올라&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=597806&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;그래서 더 뛰어드는 거야&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=600311&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;미지의 세계로 ah&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=604624&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;사랑이나 꿈 같은 건&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=607525&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;누구나 믿지만&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=610525&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;거기 거기 공략 안 하면 재미없지&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=616317&gt;&lt;P Class=KRCC&gt;
+&amp;nbsp;
+&lt;Sync Start=616973&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;아슬아슬 사랑&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=619262&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;위태로운 보더라인&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=622310&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;난이도 G라도&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=624454&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;모든 걸 부숴주겠어&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=628966&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;빙글빙글 날며
+&lt;Sync Start=631182&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;한층 더 G로&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=634183&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;의식이 녹아드네&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=636399&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;몸은 제어불능&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=640118&gt;&lt;P Class=KRCC&gt;
+&lt;i&gt;&lt;font color="#ff88ff"&gt;가버리겠어&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=643750&gt;&lt;P Class=KRCC&gt;
+&nbsp;</textarea>
+            <button class="btnCombine">＞</button>
+            <textarea class="output"></textarea>
+        </div>
+        <div class="tab" name="devide"></div>
+    </div>
+    <div id="addTabLayer">
+        <div id="addTabMenu">
+            <button type="button" name="fillSync">중간 싱크 생성</button>
+            <button type="button" name="normalizer">정규화</button>
+            <button type="button" name="fusion">싱크+내용 조합</button>
+            <button type="button" name="combine">겹치는 싱크 결합</button>
+            <button type="button" name="devide">겹치는 싱크 분리</button>
+
+            <button type="reset" id="btnCancelAddTab">취소</button>
+        </div>
+    </div>
+</body>
+</html>
