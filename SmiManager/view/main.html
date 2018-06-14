@@ -92,9 +92,21 @@
             $("button[name=combine]").click();
         }
         //$(initMain);
+
+        function calcWidth(str) {
+            var tmp = $("<span>").addClass("calcWidth").html(str);
+            $("body").append(tmp);
+            var width = tmp.innerWidth();
+            tmp.remove();
+            return width;
+        }
     </script>
     <link rel="stylesheet" type="text/css" href="css/common.css" />
     <style>
+        .calcWidth,
+        .calcWidth * {
+            font-size: 128px;
+        }
         #tabHead {
             width: 100%;
             background: #eee;
