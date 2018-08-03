@@ -6,6 +6,8 @@ namespace SmiManager
 {
     static class Shaker
     {
+        private static float FRAME_LENGTH = 1001 / 24.0f; // 24fps
+
         private class ShakeSmiLines
         {
             static int SIZE = 2;
@@ -43,17 +45,13 @@ namespace SmiManager
 
                 string result = string.Format("<font size=\"{0}\">　</font><br>", top);
                 foreach (string line in lines)
-                {
                     result += "​" + sLeft + line + sRight + "​" + "<br>";
-                }
                 return result + string.Format("<font size=\"{0}\">　</font>", bottom);
             }
         }
         public static List<Smi> Shake(List<Smi> input)
         {
             List<Smi> output = new List<Smi>();
-
-            double frameTime = 41.7;
 
             int phase = 0;
             for (int i = 0; i < input.Count - 1; i++)
@@ -69,7 +67,7 @@ namespace SmiManager
                     int time = end - start;
                     ShakeSmiLines lines = new ShakeSmiLines(smi.text);
 
-                    int frames = (int)Math.Round(time / frameTime);
+                    int frames = (int)Math.Round(time / FRAME_LENGTH);
                     if (frames < 1) frames = 1;
                     for (int frame = 0; frame < frames; frame++)
                     {
@@ -83,7 +81,7 @@ namespace SmiManager
                 }
             }
             if (input.Count > 0)
-            {
+            {   // 마지막 싱크는 흔들기 처리 없이 루프 밖에 위치
                 output.Add(input[input.Count - 1]);
             }
             return output;

@@ -7,6 +7,7 @@ namespace SmiManager
     static class NicoNico
     {
         private static float FRAME_LENGTH = 1001 / 24.0f; // 24fps
+
         public class NicoLine
         {
             public static float lineWidth = 100;
@@ -43,9 +44,7 @@ namespace SmiManager
             {
                 line = last1;
                 if (Smi.GetLineWidth(last3) - width < width - Smi.GetLineWidth(line))
-                {
                     line = last3;
-                }
             }
             return line;
         }
@@ -67,9 +66,7 @@ namespace SmiManager
             {
                 line = last1;
                 if (Smi.GetLineWidth(last3) - width < width - Smi.GetLineWidth(line))
-                {
                     line = last3;
-                }
             }
             return line;
         }
@@ -117,22 +114,18 @@ namespace SmiManager
                     foreach (NicoLine line in lines[i])
                     {
                         float pos = line.CalcLeft(frame);
-                        Console.WriteLine(pos);
                         if (pos < 0)
                         {   // 왼쪽이 잘리기 시작
-                            Console.WriteLine("왼쪽이 잘리기 시작: {0}", pos);
                             float leftWidth = pos + line.width;
                             if (leftWidth > 0)
                             {   // 화면에 남는 부분이 있음
                                 if (leftWidth >= NicoLine.lineWidth)
-                                {
-                                    // 남는 부분이 화면보다 큼
+                                {   // 남는 부분이 화면보다 큼
                                     result = CutLineLeftToWidth(line.text, leftWidth);
                                     result = CutLineRightToWidth(line.text, NicoLine.lineWidth);
                                 }
                                 else
-                                {
-                                    // 남는 부분이 화면보다 작음
+                                {   // 남는 부분이 화면보다 작음
                                     string text = CutLineLeftToWidth(line.text, leftWidth);
                                     result = text + CutLineLeftToWidth(result, NicoLine.lineWidth - leftWidth);
                                 }
@@ -144,13 +137,9 @@ namespace SmiManager
                             result = CutLineRightToWidth(result, pos) + line.text;
                             float thisWidth = Smi.GetLineWidth(result);
                             if (thisWidth > NicoLine.lineWidth)
-                            {
                                 result = CutLineRightToWidth(result, NicoLine.lineWidth);
-                            }
                             else
-                            {
                                 result += CutLineLeftToWidth(lastResult, NicoLine.lineWidth - thisWidth);
-                            }
                         }
                     }
                     smi.text += (i == 0 ? "" : "<br>") + result;

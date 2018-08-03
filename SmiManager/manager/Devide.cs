@@ -28,9 +28,7 @@ namespace SmiManager
                     else if (text[i] == '　')
                         l += 3;
                     else
-                    {
                         break;
-                    }
                 }
                 for (int i = text.Length - 1; i >= 0; i--)
                 {
@@ -39,9 +37,7 @@ namespace SmiManager
                     else if (text[i] == '　')
                         r += 3;
                     else
-                    {
                         break;
-                    }
                 }
                 padding = Math.Min(l, r);
                 int j; l = 0; r = 0;
@@ -178,16 +174,12 @@ namespace SmiManager
                     for (int i = 0; i < upperLineCount; i++)
                     {
                         if (smi.lines[i].text != null)
-                        {
                             upperText = (upperText == null ? "" : upperText + "<br>") + smi.lines[i].text;
-                        }
                     }
                     for (int i = upperLineCount; i < lineCount; i++)
                     {
                         if (smi.lines[i].text != null)
-                        {
                             lowerText = (lowerText == null ? "" : lowerText + "<br>") + smi.lines[i].text;
-                        }
                     }
 
                     if (outputUpper.Count > 0)
