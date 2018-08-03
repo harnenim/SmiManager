@@ -9,6 +9,8 @@
     <script>
         var tab = {};
         function initMain() {
+            var nicoPreset = $("[name=nico] .lines>.list>.line:eq(0)").clone();
+
             tab.head = $("#tabHead");
             tab.body = $("#tabBody");
             tab.btnAddTab = $("#btnAddTab");
@@ -45,7 +47,8 @@
                     return;
                 }
                 var number = ++tab.count;
-                var th = tab.preset.head.clone().attr("id", "th" + number).text(name + " " + number);
+                var th = tab.preset.head.clone().attr("id", "th" + number);
+                th.find("span.tab-name").text(name + " " + number);
                 var tb = tab.preset.body[name].clone().attr("id", "tb" + number);
                 tab.head.append(th);
                 tab.head.append(tab.btnAddTab);
@@ -61,6 +64,23 @@
                 th.addClass("selected");
                 tab.body.find(".tab").hide();
                 tab.body.find("#tb" + th.attr("id").substring(2)).show();
+            });
+            tab.head.on("click", "button.btn-close-tab", function () {
+                var th = $(this).parents(".tab");
+                if (th.hasClass("selected")) {
+                    var tabIndex = 0;
+                    var tabs = tab.head.find(".tab");
+                    var tabIndex = tabs.index(th);
+                    if (tabIndex == tabs.length - 1) {
+                        tabIndex--;
+                    }
+                    if (tabIndex >= 0) {
+                        tab.head.find(".tab:eq(" + tabIndex + ")").click();
+                    }
+                }
+                tab.body.find("#tb" + th.attr("id").substring(2)).remove();
+                th.remove();
+                return false;
             });
             $("#btnCancelAddTab").on("click", function () {
                 tab.addTabLayer.hide();
@@ -89,17 +109,56 @@
 
             window.onresize = function () { tab.resizeBody(); };
 
-            $("button[name=combine]").click();
-        }
-        //$(initMain);
+            tab.body.on("click", "[name=nico] button.addLine", function () {
+                $(this).parents(".lines").find(".list").append(nicoPreset.clone());
+            });
+            tab.body.on("click", "[name=nico] button.removeLine", function () {
+                $(this).parents(".line").remove();
+            });
 
-        function calcWidth(str) {
-            var tmp = $("<span>").addClass("calcWidth").html(str);
-            $("body").append(tmp);
-            var width = tmp.innerWidth();
-            tmp.remove();
-            return width;
+            //$("button[name=shake]").click();
         }
+
+        // 다른 건 다 공통으로 뺐는데, 이쪽은 하다 보니 살짝 누더기가 된 느낌
+        function getNicoValue(id) {
+            var nico = {
+                  "width": $("#" + id + " .width>input").val()
+                , "value": []
+            };
+            $("#" + id + " .list>div.line").each(function () {
+                var line = $(this);
+                nico.value.push({
+                      "line" : line.find("input.line" ).val()
+                    , "start": line.find("input.start").val()
+                    , "end"  : line.find("input.end"  ).val()
+                    , "text" : line.find("input.text" ).val()
+                });
+            });
+            return JSON.stringify(nico);
+        }
+
+        var previews = {};
+        function setPreview(id, json, interval) {
+            //alert(json);
+            if (previews[id]) {
+                clearInterval(previews[id].interval);
+                previews[id] = null;
+            }
+            if (json == null) return;
+            var list = JSON.parse(json);
+            if (list.length == 0) return;
+
+            var preview = previews[id] = {
+                  "index": 0
+                , "list": list
+                , "view": $("#" + id + " .preview")
+            };
+            preview.interval = setInterval(function () {
+                preview.view.html(list[preview.index++ % preview.list.length]);
+            }, interval == null ? 42 : interval);
+        }
+
+        //$(initMain); // C#에서 호출
     </script>
     <link rel="stylesheet" type="text/css" href="css/common.css" />
     <style>
@@ -129,6 +188,19 @@
             background: #fff;
             cursor: pointer;
         }
+
+        #tabHead > .tab > span.tab-name {
+            background: transparent;
+        }
+
+            #tabHead > .tab > button.btn-close-tab {
+                float: right;
+                border: 0;
+                background: transparent;
+            }
+            #tabHead > .tab > button.btn-close-tab:hover {
+                color: #f00;
+            }
 
             #tabHead > .tab.selected,
             #tabHead > .tab:hover,
@@ -160,10 +232,10 @@
 
         #addTabMenu {
             position: absolute;
-            top: calc(50% - 160px);
+            top: calc(50% - 185px);
             left: calc(50% - 100px);
             width: 200px;
-            height: 320px;
+            height: 420px;
             background: #fff;
         }
 
@@ -208,7 +280,9 @@
                     }
 
                     #tabBody > div.tab[name=fillSync] textarea.output {
+                        top: 200px;
                         left: calc(50% + 10px);
+                        height: calc(100% - 200px);
                     }
 
                 #tabBody > div.tab[name=fillSync] .btnFillSync {
@@ -232,7 +306,9 @@
                     }
 
                     #tabBody > div.tab[name=normalizer] textarea.output {
+                        top: 200px;
                         left: calc(50% + 10px);
+                        height: calc(100% - 200px);
                     }
 
                 #tabBody > div.tab[name=normalizer] .btnNormalize {
@@ -298,11 +374,165 @@
                         height: 50%;
                     }
                     #tabBody > div.tab[name=combine] textarea.output {
-                        top: 0;
+                        top: 200px;
                         left: calc(50% + 10px);
-                        height: 100%;
+                        height: calc(100% - 200px);
                     }
                 #tabBody > div.tab[name=combine] button.btnCombine {
+                    position: absolute;
+                    top: 0;
+                    left: calc(50% - 10px);
+                    width: 20px;
+                    height: 100%;
+                }
+
+                #tabBody > div.tab[name=devide] textarea {
+                    position: absolute;
+                    width: calc(50% - 10px);
+                    border-width: 0;
+                }
+
+                    #tabBody > div.tab[name=devide] textarea.input {
+                        top: 0;
+                        left: 0;
+                        height: 100%;
+                    }
+
+                    #tabBody > div.tab[name=devide] textarea.outputUpper {
+                        top: 0;
+                        left: calc(50% + 10px);
+                        height: calc(50% - 1px);
+                        border-bottom-width: 1px;
+                    }
+
+                    #tabBody > div.tab[name=devide] textarea.outputLower {
+                        top: 50%;
+                        left: calc(50% + 10px);
+                        height: 50%;
+                    }
+
+                #tabBody > div.tab[name=devide] button.btnDevide {
+                    position: absolute;
+                    top: 0;
+                    left: calc(50% - 10px);
+                    width: 20px;
+                    height: 100%;
+                }
+
+                #tabBody > div.tab[name=shake] textarea {
+                    position: absolute;
+                    top: 0;
+                    width: calc(50% - 10px);
+                    height: 100%;
+                    border: 0;
+                }
+
+                    #tabBody > div.tab[name=shake] textarea.input {
+                        left: 0;
+                    }
+
+                    #tabBody > div.tab[name=shake] textarea.output {
+                        top: 200px;
+                        left: calc(50% + 10px);
+                        height: calc(100% - 200px);
+                    }
+
+                #tabBody > div.tab[name=shake] .btnShake {
+                    position: absolute;
+                    top: 0;
+                    left: calc(50% - 10px);
+                    width: 20px;
+                    height: 100%;
+                }
+
+                #tabBody > div.tab[name=nico] div.input,
+                #tabBody > div.tab[name=nico] textarea.output {
+                    position: absolute;
+                    top: 0;
+                    width: calc(50% - 10px);
+                    height: 100%;
+                    border: 0;
+                }
+
+                    #tabBody > div.tab[name=nico] div.input {
+                        left: 0;
+                    }
+
+                        #tabBody > div.tab[name=nico] div.input input[type=number] {
+                            width: 50px;
+                        }
+
+                        #tabBody > div.tab[name=nico] div.input div.width {
+                            padding: 4px;
+                        }
+
+                        #tabBody > div.tab[name=nico] div.input div.lines {
+                            overflow-y: scroll;
+                        }
+
+                        #tabBody > div.tab[name=nico] div.input div.lines div.line {
+                            width: 100%;
+                            height: 20px;
+                            position: relative;
+                        }
+
+                            #tabBody > div.tab[name=nico] div.input div.lines div.line > * {
+                                position: absolute;
+                            }
+
+                            #tabBody > div.tab[name=nico] div.input div.lines div.line input.line {
+                                left: 0;
+                                width: 40px;
+                            }
+
+                            #tabBody > div.tab[name=nico] div.input div.lines div.line input.start {
+                                left: 40px;
+                                width: 60px;
+                            }
+
+                            #tabBody > div.tab[name=nico] div.input div.lines div.line input.end {
+                                left: 100px;
+                                width: 60px;
+                            }
+
+                            #tabBody > div.tab[name=nico] div.input div.lines div.line input.text {
+                                left: 160px;
+                                width: calc(100% - 180px);
+                            }
+
+                            #tabBody > div.tab[name=nico] div.input div.lines div.line button.removeLine {
+                                right: 0;
+                            }
+
+                            #tabBody > div.tab[name=nico] div.input div.lines button.addLine {
+                                width: 100%;
+                            }
+
+                #tabBody > div.tab .preview {
+                    position: absolute;
+                    left: calc(50% + 10px);
+                    width: calc(50% - 30px);
+                    height: 180px;
+                    padding: 10px;
+                    color: #fff;
+                    text-align: center;
+                }
+                    #tabBody > div.tab .preview,
+                    #tabBody > div.tab .preview *,
+                    #tabBody > div.tab .preview span {
+                        background: #000;
+                        font-family: 'Malgun Gothic';
+                        font-size: 20px;
+                    }
+
+                #tabBody > div.tab[name=nico] textarea.output {
+                    top: 200px;
+                    left: calc(50% + 10px);
+                    height: calc(100% - 200px);
+                    font-family: 'Malgun Gothic';
+                }
+
+                #tabBody > div.tab[name=nico] .btnNico {
                     position: absolute;
                     top: 0;
                     left: calc(50% - 10px);
@@ -313,7 +543,7 @@
 </head>
 <body>
     <div id="tabHead">
-        <div class="tab selected">탭1</div>
+        <div class="tab selected"><span class="tab-name">탭1</span><button class="btn-close-tab">×</button></div>
         <div id="btnAddTab">＋</div>
         <div id="tabHeadEnd"></div>
     </div>
@@ -321,11 +551,11 @@
         <div class="tab" name="fillSync">
             <textarea class="input">&lt;Sync Start=61379&gt;&lt;P Class=KRCC&gt;
 &lt;font color="#cccc88"&gt;I&lt;/font&gt;&lt;font color="#997722"&gt;n the dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
-&lt;font color="#cccc88"&gt;In&lt;/font&gt;&lt;font color="#997722"&gt;the dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In&lt;/font&gt; &lt;font color="#997722"&gt;the dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
 &lt;Sync Start=61687&gt;&lt;P Class=KRCC&gt;
 &lt;font color="#cccc88"&gt;In t&lt;/font&gt;&lt;font color="#997722"&gt;he dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
 &lt;font color="#cccc88"&gt;In th&lt;/font&gt;&lt;font color="#997722"&gt;e dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
-&lt;font color="#cccc88"&gt;In the&lt;/font&gt;&lt;font color="#997722"&gt;dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In the&lt;/font&gt; &lt;font color="#997722"&gt;dreaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
 &lt;Sync Start=61957&gt;&lt;P Class=KRCC&gt;
 &lt;font color="#cccc88"&gt;In the d&lt;/font&gt;&lt;font color="#997722"&gt;reaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
 &lt;font color="#cccc88"&gt;In the dr&lt;/font&gt;&lt;font color="#997722"&gt;eaming 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
@@ -335,10 +565,11 @@
 &lt;font color="#cccc88"&gt;In the dream&lt;/font&gt;&lt;font color="#997722"&gt;ing 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
 &lt;font color="#cccc88"&gt;In the dreami&lt;/font&gt;&lt;font color="#997722"&gt;ng 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
 &lt;font color="#cccc88"&gt;In the dreamin&lt;/font&gt;&lt;font color="#997722"&gt;g 誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
-&lt;font color="#cccc88"&gt;In the dreaming&lt;/font&gt;&lt;font color="#997722"&gt;誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
+&lt;font color="#cccc88"&gt;In the dreaming&lt;/font&gt; &lt;font color="#997722"&gt;誰かのために&lt;/font&gt;&lt;br&gt;In the dreaming 누군가를 위해서
 &lt;Sync Start=63710&gt;&lt;P Class=KRCC&gt;
 </textarea>
             <button class="btnFillSync">＞</button>
+            <div class="preview"></div>
             <textarea class="output"></textarea>
         </div>
         <div class="tab" name="normalizer">
@@ -348,8 +579,33 @@ asdf
 가&lt;font color="#abcdef"&gt;나&lt;/font&gt;다&lt;font color="#9abcde" fade="in"&gt;라&lt;/font&gt;마&lt;font color="#89abcd" fade="out"&gt;바&lt;/font&gt;사
 &lt;Sync Start=1500&gt;&lt;P Class=KRCC &gt;
 가&lt;font color="#abcdef"&gt;나&lt;/font&gt;다&lt;font color="#9abcde"&gt;라&lt;/font&gt;마&lt;font color="#000000"&gt;바&lt;/font&gt;사
+&lt;Sync Start=2000&gt;&lt;P Class=KRCC &gt;
+&lt;font typing='keyboard(1,1)'&gt;가각갃각사test가나&lt;/font&gt;
+&lt;Sync Start=3000&gt;&lt;P Class=KRCC &gt;
+가각갃각사test가나
+&lt;Sync Start=4000&gt;&lt;P Class=KRCC&gt;
+테스트　　　테스트
+&lt;Sync Start=5000&gt;&lt;P Class=KRCC&gt;
+테스트&lt;font typing='typewriter'&gt;텍스트&lt;/font&gt;테스트
+&lt;Sync Start=6000&gt;&lt;P Class=KRCC&gt;
+테스트&lt;font typing='keyboard'&gt;텍스트&lt;/font&gt;테스트
+&lt;Sync Start=7000&gt;&lt;P Class=KRCC&gt;
+테스트&lt;font typing='keyboard'&gt;테스트&lt;/font&gt;테스트
+&lt;Sync Start=8000&gt;&lt;P Class=KRCC&gt;
+테스트&lt;font typing='keyboard(0,1)'&gt;테스트&lt;/font&gt;테스트
+&lt;Sync Start=9000&gt;&lt;P Class=KRCC&gt;
+테스트&lt;font typing='keyboard(1,1)'&gt;테스트&lt;/font&gt;테스트
+&lt;Sync Start=10000&gt;&lt;P Class=KRCC&gt;
+테스트&lt;font typing='keyboard'&gt;테test&lt;/font&gt;테스트
+&lt;Sync Start=11000&gt;&lt;P Class=KRCC&gt;
+테스트&lt;font typing='keyboard invisible'&gt;테test&lt;/font&gt;테스트
+&lt;Sync Start=12000&gt;&lt;P Class=KRCC&gt;
+테스트&lt;font typing='keyboard hangeul'&gt;테test&lt;/font&gt;&lt;br&gt;테스트
+&lt;Sync Start=13000&gt;&lt;P Class=KRCC&gt;
+테스트테스트테스트
 </textarea>
             <button class="btnNormalize">＞</button>
+            <div class="preview"></div>
             <textarea class="output"></textarea>
         </div>
         <div class="tab" name="fusion">
@@ -380,44 +636,376 @@ asdf
             <button type="button" class="btnFusion">＞</button>
         </div>
         <div class="tab" name="combine">
-            <textarea class="inputUpper">&lt;Sync Start=589368&gt;&lt;P Class=KRCC&gt;
-노래하지 마!
-&lt;Sync Start=590777&gt;&lt;P Class=KRCC&gt;
-&amp;nbsp;
-&lt;Sync Start=597997&gt;&lt;P Class=KRCC&gt;
-현혹되지 마라&lt;br&gt;룬으로 느껴라!
-&lt;Sync Start=600437&gt;&lt;P Class=KRCC&gt;
-&amp;nbsp;
-&lt;Sync Start=620892&gt;&lt;P Class=KRCC&gt;
-프레이야
-&lt;Sync Start=621974&gt;&lt;P Class=KRCC &gt;
-&amp;nbsp;
-&lt;Sync Start=623620&gt;&lt;P Class=KRCC&gt;
-괜찮아? 미라미라
-&lt;Sync Start=625292&gt;&lt;P Class=KRCC&gt;
-혼자 설 수 있겠어?
-&lt;Sync Start=626854&gt;&lt;P Class=KRCC &gt;
-&amp;nbsp;
-&lt;Sync Start=628340&gt;&lt;P Class=KRCC&gt;
-당연하지
-&lt;Sync Start=629444&gt;&lt;P Class=KRCC&gt;
-&amp;nbsp;
-&lt;Sync Start=645212&gt;&lt;P Class=KRCC&gt;
-산개해서 각자 쫓아라!
-&lt;Sync Start=647353&gt;&lt;P Class=KRCC&gt;
-유적의 폴드 에너지가&lt;br&gt;급속히 활성화
-&lt;Sync Start=650396&gt;&lt;P Class=KRCC&gt;
-발퀴레의 폴드파에&lt;br&gt;감응하는 것 같습니다
-&lt;Sync Start=653044&gt;&lt;P Class=KRCC &gt;
+            <!--
+                <textarea class="inputUpper">&lt;Sync Start=589368&gt;&lt;P Class=KRCC&gt;
+    노래하지 마!
+    &lt;Sync Start=590777&gt;&lt;P Class=KRCC&gt;
+    &amp;nbsp;
+    &lt;Sync Start=597997&gt;&lt;P Class=KRCC&gt;
+    현혹되지 마라&lt;br&gt;룬으로 느껴라!
+    &lt;Sync Start=600437&gt;&lt;P Class=KRCC&gt;
+    &amp;nbsp;
+    &lt;Sync Start=620892&gt;&lt;P Class=KRCC&gt;
+    프레이야
+    &lt;Sync Start=621974&gt;&lt;P Class=KRCC &gt;
+    &amp;nbsp;
+    &lt;Sync Start=623620&gt;&lt;P Class=KRCC&gt;
+    괜찮아? 미라미라
+    &lt;Sync Start=625292&gt;&lt;P Class=KRCC&gt;
+    혼자 설 수 있겠어?
+    &lt;Sync Start=626854&gt;&lt;P Class=KRCC &gt;
+    &amp;nbsp;
+    &lt;Sync Start=628340&gt;&lt;P Class=KRCC&gt;
+    당연하지
+    &lt;Sync Start=629444&gt;&lt;P Class=KRCC&gt;
+    &amp;nbsp;
+    &lt;Sync Start=645212&gt;&lt;P Class=KRCC&gt;
+    산개해서 각자 쫓아라!
+    &lt;Sync Start=647353&gt;&lt;P Class=KRCC&gt;
+    유적의 폴드 에너지가&lt;br&gt;급속히 활성화
+    &lt;Sync Start=650396&gt;&lt;P Class=KRCC&gt;
+    발퀴레의 폴드파에&lt;br&gt;감응하는 것 같습니다
+    &lt;Sync Start=653044&gt;&lt;P Class=KRCC &gt;
+    &amp;nbsp;</textarea>
+                <textarea class="inputLower">&lt;Sync Start=579908&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;서로 눈이 맞고 사랑을 하고&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=582972&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;정신없이 뒤쫓아가고&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=585940&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;그래도 더 자세히 알고 싶어서&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=588316&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;활활 불타올라&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=590924&gt;&lt;P Class=KRCC&gt;
+    &amp;nbsp;
+    &lt;Sync Start=591892&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;원할수록 의문이 늘고&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=594806&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;생각할수록 열이 올라&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=597806&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;그래서 더 뛰어드는 거야&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=600311&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;미지의 세계로 ah&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=604624&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;사랑이나 꿈 같은 건&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=607525&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;누구나 믿지만&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=610525&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;거기 거기 공략 안 하면 재미없지&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=616317&gt;&lt;P Class=KRCC&gt;
+    &amp;nbsp;
+    &lt;Sync Start=616973&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;아슬아슬 사랑&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=619262&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;위태로운 보더라인&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=622310&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;난이도 G라도&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=624454&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;모든 걸 부숴주겠어&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=628966&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;빙글빙글 날며
+    &lt;Sync Start=631182&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;한층 더 G로&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=634183&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;의식이 녹아드네&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=636399&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;몸은 제어불능&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=640118&gt;&lt;P Class=KRCC&gt;
+    &lt;i&gt;&lt;font color="#ff88ff"&gt;가버리겠어&lt;/font&gt;&lt;/i&gt;
+    &lt;Sync Start=643750&gt;&lt;P Class=KRCC&gt;
+    &amp;nbsp;</textarea>
+                -->
+            <textarea class="inputUpper">&lt;Sync Start=113348&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;
+&lt;Sync Start=124734&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;
+&lt;Sync Start=132345&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;
+&lt;Sync Start=140017&gt;&lt;P Class=KRCC&gt;
+그 지도자, 제로의 정체는 바로 &lt;br&gt;과거 신성 브리타니아 제국에게&lt;br&gt;버려진 황자  　　　　　　　　&lt;br&gt;를루슈 비 브리타니아 　　　　&lt;br&gt;본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;
+&lt;Sync Start=147639&gt;&lt;P Class=KRCC&gt;
 &amp;nbsp;</textarea>
-            <textarea class="inputLower">&lt;Sync Start=579908&gt;&lt;P Class=KRCC&gt;
+            <textarea class="inputLower">&lt;Sync Start=109569&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;け&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;どもけものみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=109682&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行け&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ど&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;もけものみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=109802&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けど&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;も&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;けものみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=109921&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けども&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;け&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ものみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=110200&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けどもけ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;も&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;のみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=110484&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けどもけも&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;みち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=110592&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けどもけもの&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;み&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=110714&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けどもけものみ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=110936&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けどもけものみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=111386&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;子&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よ虎よと吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=111521&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;虎よと吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=111650&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;虎&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よと吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=111896&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;虎&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よと吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=112136&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ虎&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;と吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=112466&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ虎よ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;と&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=112572&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ虎よと&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;吠&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=112683&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ虎よと吠&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=112932&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ虎よと吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=113348&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#CC9960"&gt;茜&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;射す空の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=113485&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#99BB9E"&gt;茜&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;射す空の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=113627&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;射&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;す空の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=113764&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;す&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;空の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=114050&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;空&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=114291&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;空&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=114410&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す空&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=114532&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す空の　&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;彼&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115115&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す空の　&lt;/FONT&gt;&lt;FONT color="#99BB9E"&gt;彼&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115252&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す空の　彼&lt;/FONT&gt;&lt;FONT color="#CC9960"&gt;方&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115381&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;まほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115508&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方に&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ま&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115619&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方にま&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ほ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115955&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方にまほ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ろ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=116190&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方にまほろ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=116651&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=117197&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#B2AA7F"&gt;幽&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;囚の孤獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=117317&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;囚&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の孤獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=117437&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;囚&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の孤獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=117572&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;孤獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=117861&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;孤&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=118108&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;獨&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=118226&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;獨&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=118346&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤獨&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=118594&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;彷&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=119018&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　&lt;/FONT&gt;&lt;FONT color="#99BB9E"&gt;彷&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=119155&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷&lt;/FONT&gt;&lt;FONT color="#CC9960"&gt;徨&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=119282&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=119410&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;青&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=119739&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;青&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=119955&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う青&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;春&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=120098&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う青&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;春&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=120242&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う青春&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=120514&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 
+&lt;Sync Start=120958&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#B2AA7F"&gt;弱&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;さと怒りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=121095&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;さ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;と怒りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=121248&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;と&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;怒りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=121373&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;怒&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=121678&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;怒&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=121887&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;り&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;が姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=122014&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒り&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;が&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=122134&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒りが&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;姿&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=122559&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒りが&lt;/FONT&gt;&lt;FONT color="#CC9960"&gt;姿&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=122886&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒りが&lt;/FONT&gt;&lt;FONT color="#99BB9E"&gt;姿&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123022&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;無&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123143&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;き&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123279&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;敵&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123398&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;敵&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123695&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き敵&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;で&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;すか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123818&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き敵で&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;す&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;か&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=124046&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き敵です&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;か&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=124230&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=124734&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#B2AA7F"&gt;父&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よ　未だ我は&lt;/FONT&gt;&lt;br&gt;아버지여, 아직 저는
+&lt;Sync Start=125122&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;父&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;　未だ我は&lt;/FONT&gt;&lt;br&gt;아버지여, 아직 저는
+&lt;Sync Start=125249&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;父よ　&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;未&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;だ我は&lt;/FONT&gt;&lt;br&gt;아버지여, 아직 저는
+&lt;Sync Start=125471&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;父よ　&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;未&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;だ我は&lt;/FONT&gt;&lt;br&gt;아버지여, 아직 저는
+&lt;Sync Start=125673&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;父よ　未&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;だ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;我は&lt;/FONT&gt;&lt;br&gt;아버지여, 아직 저는
+&lt;Sync Start=125815&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;父よ　未だ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;我&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;&lt;br&gt;아버지여, 아직 저는
+&lt;Sync Start=125952&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;父よ　未だ&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;我&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;&lt;br&gt;아버지여, 아직 저는
+&lt;Sync Start=126079&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;父よ　未だ我&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;&lt;br&gt;아버지여, 아직 저는
+&lt;Sync Start=126201&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;父よ　未だ我は&lt;/FONT&gt;&lt;br&gt;아버지여, 아직 저는
+&lt;Sync Start=126655&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#CC9960"&gt;己&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を知りがたし&lt;/FONT&gt;&lt;br&gt;제 자신을 알고 싶습니다
+&lt;Sync Start=127016&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#99BB9E"&gt;己&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を知りがたし&lt;/FONT&gt;&lt;br&gt;제 자신을 알고 싶습니다
+&lt;Sync Start=127143&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;己&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;知りがたし&lt;/FONT&gt;&lt;br&gt;제 자신을 알고 싶습니다
+&lt;Sync Start=127378&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;己を&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;知&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;りがたし&lt;/FONT&gt;&lt;br&gt;제 자신을 알고 싶습니다
+&lt;Sync Start=127616&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;己を知&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;り&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;がたし&lt;/FONT&gt;&lt;br&gt;제 자신을 알고 싶습니다
+&lt;Sync Start=127864&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;己を知り&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;が&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;たし&lt;/FONT&gt;&lt;br&gt;제 자신을 알고 싶습니다
+&lt;Sync Start=128112&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;己を知りが&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;た&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;し&lt;/FONT&gt;&lt;br&gt;제 자신을 알고 싶습니다
+&lt;Sync Start=128335&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;己を知りがた&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;し&lt;/FONT&gt;&lt;br&gt;제 자신을 알고 싶습니다
+&lt;Sync Start=128583&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;己を知りがたし&lt;/FONT&gt;&lt;br&gt;제 자신을 알고 싶습니다
+&lt;Sync Start=130449&gt;&lt;P Class=KRCC&gt;
+&amp;nbsp;
+&lt;Sync Start=132345&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#B2AA7F"&gt;先&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;立つ兄らの&lt;/FONT&gt;&lt;br&gt;앞서간 형들의
+&lt;Sync Start=132776&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;先&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;立&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;つ兄らの&lt;/FONT&gt;&lt;br&gt;앞서간 형들의
+&lt;Sync Start=133123&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;先立&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;つ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;兄らの&lt;/FONT&gt;&lt;br&gt;앞서간 형들의
+&lt;Sync Start=133239&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;先立つ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;兄&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;らの&lt;/FONT&gt;&lt;br&gt;앞서간 형들의
+&lt;Sync Start=134247&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;先立つ&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;兄&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;らの&lt;/FONT&gt;&lt;br&gt;앞서간 형들의
+&lt;Sync Start=134711&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;先立つ兄&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ら&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;&lt;br&gt;앞서간 형들의
+&lt;Sync Start=135095&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;先立つ兄ら&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;&lt;br&gt;앞서간 형들의
+&lt;Sync Start=135224&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;先立つ兄らの&lt;/FONT&gt;&lt;br&gt;앞서간 형들의
+&lt;Sync Start=136456&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;見&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;え&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ない背中を追えば&lt;/FONT&gt;&lt;br&gt;보이지 않는 등을 뒤쫓으니
+&lt;Sync Start=136640&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;見え&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;な&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;い背中を追えば&lt;/FONT&gt;&lt;br&gt;보이지 않는 등을 뒤쫓으니
+&lt;Sync Start=136874&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;見えな&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;い&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;背中を追えば&lt;/FONT&gt;&lt;br&gt;보이지 않는 등을 뒤쫓으니
+&lt;Sync Start=137123&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;見えない&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;背&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;中を追えば&lt;/FONT&gt;&lt;br&gt;보이지 않는 등을 뒤쫓으니
+&lt;Sync Start=137576&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;見えない背&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;中&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を追えば&lt;/FONT&gt;&lt;br&gt;보이지 않는 등을 뒤쫓으니
+&lt;Sync Start=138071&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;見えない背&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;中&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を追えば&lt;/FONT&gt;&lt;br&gt;보이지 않는 등을 뒤쫓으니
+&lt;Sync Start=138304&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;見えない背中&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;追えば&lt;/FONT&gt;&lt;br&gt;보이지 않는 등을 뒤쫓으니
+&lt;Sync Start=138567&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;見えない背中を&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;追&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;えば&lt;/FONT&gt;&lt;br&gt;보이지 않는 등을 뒤쫓으니
+&lt;Sync Start=138784&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;見えない背中を追&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;え&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ば&lt;/FONT&gt;&lt;br&gt;보이지 않는 등을 뒤쫓으니
+&lt;Sync Start=138976&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;見えない背中を追え&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ば&lt;/FONT&gt;&lt;br&gt;보이지 않는 등을 뒤쫓으니
+&lt;Sync Start=139513&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;見えない背中を追えば&lt;/FONT&gt;&lt;br&gt;보이지 않는 등을 뒤쫓으니
+&lt;Sync Start=140017&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#B2AA7F"&gt;迷&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;いの一夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=140377&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;い&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の一夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=140769&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷い&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;一夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=140906&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;一&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=141921&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;一&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=142321&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;夜&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=142729&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一夜&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=142866&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一夜に&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;明&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=143817&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一夜に&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;明&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=144017&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一夜に明&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;星&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=144258&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一夜に明&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;星&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=144457&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=144683&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星は&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;誘&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=145201&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星は&lt;/FONT&gt;&lt;FONT color="#CC9960"&gt;誘&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=145361&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星は&lt;/FONT&gt;&lt;FONT color="#99BB9E"&gt;誘&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=145530&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星は誘&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=145697&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=147639&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;し&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;て終わらぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=148344&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死し&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;て&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;終わらぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=148506&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死して&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;終&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;わらぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=149296&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死して終&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;わ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;らぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=149484&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死して終わ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ら&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=150161&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死して終わら&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=150402&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死して終わらぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는</textarea>
+            <button class="btnCombine">＞</button>
+            <div class="preview"></div>
+            <textarea class="output"></textarea>
+        </div>
+        <div class="tab" name="devide">
+            <!--
+            <textarea class="input">&lt;Sync Start=579908&gt;&lt;P Class=KRCC&gt;
 &lt;i&gt;&lt;font color="#ff88ff"&gt;서로 눈이 맞고 사랑을 하고&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=582972&gt;&lt;P Class=KRCC&gt;
 &lt;i&gt;&lt;font color="#ff88ff"&gt;정신없이 뒤쫓아가고&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=585940&gt;&lt;P Class=KRCC&gt;
 &lt;i&gt;&lt;font color="#ff88ff"&gt;그래도 더 자세히 알고 싶어서&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=588316&gt;&lt;P Class=KRCC&gt;
-&lt;i&gt;&lt;font color="#ff88ff"&gt;활활 불타올라&lt;/font&gt;&lt;/i&gt;
+&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;활활 불타올라&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=589368&gt;&lt;P Class=KRCC&gt;
+&lt;b&gt;&lt;/b&gt;　 노래하지 마! 　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;/b&gt;　&lt;i&gt;&lt;font color="#ff88ff"&gt;활활 불타올라&lt;/font&gt;&lt;/i&gt;　&lt;b&gt;&lt;/b&gt;
+&lt;Sync Start=590777&gt;&lt;P Class=KRCC&gt;
+&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;활활 불타올라&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=590924&gt;&lt;P Class=KRCC&gt;
 &amp;nbsp;
 &lt;Sync Start=591892&gt;&lt;P Class=KRCC&gt;
@@ -425,9 +1013,13 @@ asdf
 &lt;Sync Start=594806&gt;&lt;P Class=KRCC&gt;
 &lt;i&gt;&lt;font color="#ff88ff"&gt;생각할수록 열이 올라&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=597806&gt;&lt;P Class=KRCC&gt;
-&lt;i&gt;&lt;font color="#ff88ff"&gt;그래서 더 뛰어드는 거야&lt;/font&gt;&lt;/i&gt;
+&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;그래서 더 뛰어드는 거야&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=597997&gt;&lt;P Class=KRCC&gt;
+&lt;b&gt;&lt;/b&gt;　　 현혹되지 마라 　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;/b&gt;　　 룬으로 느껴라! 　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;그래서 더 뛰어드는 거야&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=600311&gt;&lt;P Class=KRCC&gt;
-&lt;i&gt;&lt;font color="#ff88ff"&gt;미지의 세계로 ah&lt;/font&gt;&lt;/i&gt;
+&lt;b&gt;&lt;/b&gt;　  현혹되지 마라  　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;/b&gt;　  룬으로 느껴라!  　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;/b&gt;　&lt;i&gt;&lt;font color="#ff88ff"&gt;미지의 세계로 ah&lt;/font&gt;&lt;/i&gt;　&lt;b&gt;&lt;/b&gt;
+&lt;Sync Start=600437&gt;&lt;P Class=KRCC&gt;
+&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;미지의 세계로 ah&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=604624&gt;&lt;P Class=KRCC&gt;
 &lt;i&gt;&lt;font color="#ff88ff"&gt;사랑이나 꿈 같은 건&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=607525&gt;&lt;P Class=KRCC&gt;
@@ -439,13 +1031,27 @@ asdf
 &lt;Sync Start=616973&gt;&lt;P Class=KRCC&gt;
 &lt;i&gt;&lt;font color="#ff88ff"&gt;아슬아슬 사랑&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=619262&gt;&lt;P Class=KRCC&gt;
-&lt;i&gt;&lt;font color="#ff88ff"&gt;위태로운 보더라인&lt;/font&gt;&lt;/i&gt;
+&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;위태로운 보더라인&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=620892&gt;&lt;P Class=KRCC&gt;
+&lt;b&gt;&lt;/b&gt;　　 프레이야 　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;위태로운 보더라인&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=621974&gt;&lt;P Class=KRCC &gt;
+&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;위태로운 보더라인&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=622310&gt;&lt;P Class=KRCC&gt;
-&lt;i&gt;&lt;font color="#ff88ff"&gt;난이도 G라도&lt;/font&gt;&lt;/i&gt;
+&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;난이도 G라도&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=623620&gt;&lt;P Class=KRCC&gt;
+&lt;b&gt;&lt;/b&gt;　괜찮아? 미라미라　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;/b&gt;　  &lt;i&gt;&lt;font color="#ff88ff"&gt;난이도 G라도&lt;/font&gt;&lt;/i&gt;  　&lt;b&gt;&lt;/b&gt;
 &lt;Sync Start=624454&gt;&lt;P Class=KRCC&gt;
-&lt;i&gt;&lt;font color="#ff88ff"&gt;모든 걸 부숴주겠어&lt;/font&gt;&lt;/i&gt;
+&lt;b&gt;&lt;/b&gt;　 괜찮아? 미라미라 　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;/b&gt;　&lt;i&gt;&lt;font color="#ff88ff"&gt;모든 걸 부숴주겠어&lt;/font&gt;&lt;/i&gt;　&lt;b&gt;&lt;/b&gt;
+&lt;Sync Start=625292&gt;&lt;P Class=KRCC&gt;
+혼자 설 수 있겠어?&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;모든 걸 부숴주겠어&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=626854&gt;&lt;P Class=KRCC &gt;
+&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;모든 걸 부숴주겠어&lt;/font&gt;&lt;/i&gt;
+&lt;Sync Start=628340&gt;&lt;P Class=KRCC&gt;
+&lt;b&gt;&lt;/b&gt;　　 당연하지 　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;모든 걸 부숴주겠어&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=628966&gt;&lt;P Class=KRCC&gt;
-&lt;i&gt;&lt;font color="#ff88ff"&gt;빙글빙글 날며
+&lt;b&gt;&lt;/b&gt;　 당연하지 　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;빙글빙글 날며
+&lt;Sync Start=629444&gt;&lt;P Class=KRCC&gt;
+&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;i&gt;&lt;font color="#ff88ff"&gt;빙글빙글 날며
 &lt;Sync Start=631182&gt;&lt;P Class=KRCC&gt;
 &lt;i&gt;&lt;font color="#ff88ff"&gt;한층 더 G로&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=634183&gt;&lt;P Class=KRCC&gt;
@@ -455,19 +1061,345 @@ asdf
 &lt;Sync Start=640118&gt;&lt;P Class=KRCC&gt;
 &lt;i&gt;&lt;font color="#ff88ff"&gt;가버리겠어&lt;/font&gt;&lt;/i&gt;
 &lt;Sync Start=643750&gt;&lt;P Class=KRCC&gt;
-&nbsp;</textarea>
-            <button class="btnCombine">＞</button>
+&amp;nbsp;</textarea>
+            -->
+            <textarea class="input">&lt;Sync Start=109569&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;け&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;どもけものみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=109682&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行け&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ど&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;もけものみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=109802&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けど&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;も&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;けものみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=109921&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けども&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;け&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ものみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=110200&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けどもけ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;も&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;のみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=110484&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けどもけも&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;みち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=110592&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けどもけもの&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;み&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=110714&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けどもけものみ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=110936&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;行けどもけものみち&lt;/FONT&gt;&lt;br&gt;간다 해도 짐승의 길
+&lt;Sync Start=111386&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;子&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よ虎よと吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=111521&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;虎よと吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=111650&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;虎&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よと吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=111896&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;虎&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よと吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=112136&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ虎&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;と吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=112466&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ虎よ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;と&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=112572&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ虎よと&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;吠&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=112683&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ虎よと吠&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=112932&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;獅子よ虎よと吠え&lt;/FONT&gt;&lt;br&gt;사자 호랑이와 함께 짖으며
+&lt;Sync Start=113348&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#CC9960"&gt;茜&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;射す空の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=113485&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#99BB9E"&gt;茜&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;射す空の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=113627&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;射&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;す空の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=113764&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;す&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;空の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=114050&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;空&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=114291&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;空&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=114410&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す空&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=114532&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す空の　&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;彼&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115115&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す空の　&lt;/FONT&gt;&lt;FONT color="#99BB9E"&gt;彼&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115252&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す空の　彼&lt;/FONT&gt;&lt;FONT color="#CC9960"&gt;方&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115381&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;まほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115508&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方に&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ま&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115619&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方にま&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ほ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=115955&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方にまほ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ろ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=116190&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方にまほろ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=116651&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;茜射す空の　彼方にまほろば&lt;/FONT&gt;&lt;br&gt;붉게 비치는 하늘 저편의 꿈의 나라
+&lt;Sync Start=117197&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#B2AA7F"&gt;幽&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;囚の孤獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=117317&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;囚&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の孤獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=117437&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;囚&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の孤獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=117572&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;孤獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=117861&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;孤&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=118108&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;獨&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=118226&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;獨&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=118346&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤獨&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=118594&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;彷&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=119018&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　&lt;/FONT&gt;&lt;FONT color="#99BB9E"&gt;彷&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=119155&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷&lt;/FONT&gt;&lt;FONT color="#CC9960"&gt;徨&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=119282&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=119410&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;青&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=119739&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;青&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=119955&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う青&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;春&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=120098&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う青&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;春&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=120242&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う青春&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=120514&gt;&lt;P Class=KRCC&gt;
+황력 2009년　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국은  　　　　&lt;br&gt;황자 를루슈와 황녀 너낼리 남매를&lt;br&gt;대립 관계인 나라  　　　　　　　&lt;br&gt;일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;FONT color="#66DDDD"&gt;幽囚の孤獨に　彷徨う青春は&lt;/FONT&gt;&lt;br&gt;감옥 속의 고독에 헤매이는 청춘은 ​
+&lt;Sync Start=120958&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#B2AA7F"&gt;弱&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;さと怒りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=121095&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;さ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;と怒りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=121248&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;と&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;怒りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=121373&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;怒&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=121678&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;怒&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=121887&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;り&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;が姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=122014&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒り&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;が&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=122134&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒りが&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;姿&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=122559&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒りが&lt;/FONT&gt;&lt;FONT color="#CC9960"&gt;姿&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=122886&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒りが&lt;/FONT&gt;&lt;FONT color="#99BB9E"&gt;姿&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123022&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;無&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123143&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;き&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123279&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;敵&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123398&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;敵&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123695&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き敵&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;で&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;すか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=123818&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き敵で&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;す&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;か&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=124046&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き敵です&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;か&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=124230&gt;&lt;P Class=KRCC&gt;
+​ 황력 2009년　　　　　　　　　　 &lt;br&gt; 신성 브리타니아 제국은  　　　　 &lt;br&gt; 황자 를루슈와 황녀 너낼리 남매를 &lt;br&gt; 대립 관계인 나라  　　　　　　　 &lt;br&gt; 일본에 인질로 보낸다. 　　　　　&lt;b&gt;&lt;/b&gt; &lt;br&gt;&lt;FONT color="#66DDDD"&gt;弱さと怒りが姿無き敵ですか&lt;/FONT&gt;&lt;br&gt;연약함과 분노가 형체 없는 적입니까
+&lt;Sync Start=124734&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　  &lt;FONT color="#B2AA7F"&gt;父&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よ　未だ我は&lt;/FONT&gt;  　　　&lt;br&gt;　　　  아버지여, 아직 저는  　　　​
+&lt;Sync Start=125122&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　  &lt;FONT color="#66DDDD"&gt;父&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;よ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;　未だ我は&lt;/FONT&gt;  　　　&lt;br&gt;　　　  아버지여, 아직 저는  　　　​
+&lt;Sync Start=125249&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　  &lt;FONT color="#66DDDD"&gt;父よ　&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;未&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;だ我は&lt;/FONT&gt;  　　　&lt;br&gt;　　　  아버지여, 아직 저는  　　　​
+&lt;Sync Start=125471&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　  &lt;FONT color="#66DDDD"&gt;父よ　&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;未&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;だ我は&lt;/FONT&gt;  　　　&lt;br&gt;　　　  아버지여, 아직 저는  　　　​
+&lt;Sync Start=125673&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　  &lt;FONT color="#66DDDD"&gt;父よ　未&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;だ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;我は&lt;/FONT&gt;  　　　&lt;br&gt;　　　  아버지여, 아직 저는  　　　​
+&lt;Sync Start=125815&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　  &lt;FONT color="#66DDDD"&gt;父よ　未だ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;我&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;  　　　&lt;br&gt;　　　  아버지여, 아직 저는  　　　​
+&lt;Sync Start=125952&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　  &lt;FONT color="#66DDDD"&gt;父よ　未だ&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;我&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;  　　　&lt;br&gt;　　　  아버지여, 아직 저는  　　　​
+&lt;Sync Start=126079&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　  &lt;FONT color="#66DDDD"&gt;父よ　未だ我&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;  　　　&lt;br&gt;　　　  아버지여, 아직 저는  　　　​
+&lt;Sync Start=126201&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　  &lt;FONT color="#66DDDD"&gt;父よ　未だ我は&lt;/FONT&gt;  　　　&lt;br&gt;　　　  아버지여, 아직 저는  　　　​
+&lt;Sync Start=126655&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　  &lt;FONT color="#CC9960"&gt;己&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を知りがたし&lt;/FONT&gt;  　　&lt;br&gt;　　  제 자신을 알고 싶습니다  　　​
+&lt;Sync Start=127016&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　  &lt;FONT color="#99BB9E"&gt;己&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を知りがたし&lt;/FONT&gt;  　　&lt;br&gt;　　  제 자신을 알고 싶습니다  　　​
+&lt;Sync Start=127143&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　  &lt;FONT color="#66DDDD"&gt;己&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;知りがたし&lt;/FONT&gt;  　　&lt;br&gt;　　  제 자신을 알고 싶습니다  　　​
+&lt;Sync Start=127378&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　  &lt;FONT color="#66DDDD"&gt;己を&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;知&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;りがたし&lt;/FONT&gt;  　　&lt;br&gt;　　  제 자신을 알고 싶습니다  　　​
+&lt;Sync Start=127616&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　  &lt;FONT color="#66DDDD"&gt;己を知&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;り&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;がたし&lt;/FONT&gt;  　　&lt;br&gt;　　  제 자신을 알고 싶습니다  　　​
+&lt;Sync Start=127864&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　  &lt;FONT color="#66DDDD"&gt;己を知り&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;が&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;たし&lt;/FONT&gt;  　　&lt;br&gt;　　  제 자신을 알고 싶습니다  　　​
+&lt;Sync Start=128112&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　  &lt;FONT color="#66DDDD"&gt;己を知りが&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;た&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;し&lt;/FONT&gt;  　　&lt;br&gt;　　  제 자신을 알고 싶습니다  　　​
+&lt;Sync Start=128335&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　  &lt;FONT color="#66DDDD"&gt;己を知りがた&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;し&lt;/FONT&gt;  　　&lt;br&gt;　　  제 자신을 알고 싶습니다  　　​
+&lt;Sync Start=128583&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　  &lt;FONT color="#66DDDD"&gt;己を知りがたし&lt;/FONT&gt;  　　&lt;br&gt;　　  제 자신을 알고 싶습니다  　　​
+&lt;Sync Start=130449&gt;&lt;P Class=KRCC&gt;
+황력 2010년  　　　　　　　　　　&lt;br&gt;극동 사변 발발  　　　　　　　　　&lt;br&gt;패전국 일본은　　　　　　　　　　&lt;br&gt;신성 브리타니아 제국의 속령이 되어&lt;br&gt;에어리어 11이라 불리게 된다.　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;　&lt;/b&gt;&lt;br&gt;&lt;b&gt;　&lt;/b&gt;
+&lt;Sync Start=132345&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　　　&lt;FONT color="#B2AA7F"&gt;先&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;立つ兄らの&lt;/FONT&gt;　　　　　&lt;br&gt;　　　　　앞서간 형들의　　　　　​
+&lt;Sync Start=132776&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　　　&lt;FONT color="#66DDDD"&gt;先&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;立&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;つ兄らの&lt;/FONT&gt;　　　　　&lt;br&gt;　　　　　앞서간 형들의　　　　　​
+&lt;Sync Start=133123&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　　　&lt;FONT color="#66DDDD"&gt;先立&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;つ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;兄らの&lt;/FONT&gt;　　　　　&lt;br&gt;　　　　　앞서간 형들의　　　　　​
+&lt;Sync Start=133239&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　　　&lt;FONT color="#66DDDD"&gt;先立つ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;兄&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;らの&lt;/FONT&gt;　　　　　&lt;br&gt;　　　　　앞서간 형들의　　　　　​
+&lt;Sync Start=134247&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　　　&lt;FONT color="#66DDDD"&gt;先立つ&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;兄&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;らの&lt;/FONT&gt;　　　　　&lt;br&gt;　　　　　앞서간 형들의　　　　　​
+&lt;Sync Start=134711&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　　　&lt;FONT color="#66DDDD"&gt;先立つ兄&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ら&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;　　　　　&lt;br&gt;　　　　　앞서간 형들의　　　　　​
+&lt;Sync Start=135095&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　　　&lt;FONT color="#66DDDD"&gt;先立つ兄ら&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;　　　　　&lt;br&gt;　　　　　앞서간 형들의　　　　　​
+&lt;Sync Start=135224&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　　　　&lt;FONT color="#66DDDD"&gt;先立つ兄らの&lt;/FONT&gt;　　　　　&lt;br&gt;　　　　　앞서간 형들의　　　　　​
+&lt;Sync Start=136456&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　 &lt;FONT color="#66DDDD"&gt;見&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;え&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ない背中を追えば&lt;/FONT&gt; 　　&lt;br&gt;　　 보이지 않는 등을 뒤쫓으니 　　​
+&lt;Sync Start=136640&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　 &lt;FONT color="#66DDDD"&gt;見え&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;な&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;い背中を追えば&lt;/FONT&gt; 　　&lt;br&gt;　　 보이지 않는 등을 뒤쫓으니 　　​
+&lt;Sync Start=136874&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　 &lt;FONT color="#66DDDD"&gt;見えな&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;い&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;背中を追えば&lt;/FONT&gt; 　　&lt;br&gt;　　 보이지 않는 등을 뒤쫓으니 　　​
+&lt;Sync Start=137123&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　 &lt;FONT color="#66DDDD"&gt;見えない&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;背&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;中を追えば&lt;/FONT&gt; 　　&lt;br&gt;　　 보이지 않는 등을 뒤쫓으니 　　​
+&lt;Sync Start=137576&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　 &lt;FONT color="#66DDDD"&gt;見えない背&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;中&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を追えば&lt;/FONT&gt; 　　&lt;br&gt;　　 보이지 않는 등을 뒤쫓으니 　　​
+&lt;Sync Start=138071&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　 &lt;FONT color="#66DDDD"&gt;見えない背&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;中&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を追えば&lt;/FONT&gt; 　　&lt;br&gt;　　 보이지 않는 등을 뒤쫓으니 　　​
+&lt;Sync Start=138304&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　 &lt;FONT color="#66DDDD"&gt;見えない背中&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;を&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;追えば&lt;/FONT&gt; 　　&lt;br&gt;　　 보이지 않는 등을 뒤쫓으니 　　​
+&lt;Sync Start=138567&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　 &lt;FONT color="#66DDDD"&gt;見えない背中を&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;追&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;えば&lt;/FONT&gt; 　　&lt;br&gt;　　 보이지 않는 등을 뒤쫓으니 　　​
+&lt;Sync Start=138784&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　 &lt;FONT color="#66DDDD"&gt;見えない背中を追&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;え&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ば&lt;/FONT&gt; 　　&lt;br&gt;　　 보이지 않는 등을 뒤쫓으니 　　​
+&lt;Sync Start=138976&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　 &lt;FONT color="#66DDDD"&gt;見えない背中を追え&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ば&lt;/FONT&gt; 　　&lt;br&gt;　　 보이지 않는 등을 뒤쫓으니 　　​
+&lt;Sync Start=139513&gt;&lt;P Class=KRCC&gt;
+그로부터 7년 후　　　　　　　　　&lt;br&gt;브리타니아의 지배에 대한 저항 세력&lt;br&gt;흑의 기사단이 결성된다. 　　　　　&lt;br&gt;다수의 레지스탕스를 흡수해  　　　&lt;br&gt;확대되는 흑의 기사단. 　　　　　　&lt;b&gt;&lt;/b&gt;&lt;br&gt;　　 &lt;FONT color="#66DDDD"&gt;見えない背中を追えば&lt;/FONT&gt; 　　&lt;br&gt;　　 보이지 않는 등을 뒤쫓으니 　　​
+&lt;Sync Start=140017&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#B2AA7F"&gt;迷&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;いの一夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=140377&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;い&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の一夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=140769&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷い&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;の&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;一夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=140906&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;一&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=141921&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;一&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=142321&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;夜&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=142729&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一夜&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;に&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=142866&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一夜に&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;明&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=143817&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一夜に&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;明&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=144017&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一夜に明&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;星&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=144258&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一夜に明&lt;/FONT&gt;&lt;FONT color="#B2AA7F"&gt;星&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=144457&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;は&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=144683&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星は&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;誘&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=145201&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星は&lt;/FONT&gt;&lt;FONT color="#CC9960"&gt;誘&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=145361&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星は&lt;/FONT&gt;&lt;FONT color="#99BB9E"&gt;誘&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=145530&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星は誘&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=145697&gt;&lt;P Class=KRCC&gt;
+​　그 지도자, 제로의 정체는 바로 　&lt;br&gt;　과거 신성 브리타니아 제국에게　&lt;br&gt;　버려진 황자  　　　　　　　　　&lt;br&gt;　를루슈 비 브리타니아 　　　　　&lt;br&gt;　본인이었다.　　　　　　　　　&lt;b&gt;&lt;/b&gt;　&lt;br&gt;&lt;FONT color="#66DDDD"&gt;迷いの一夜に明星は誘う&lt;/FONT&gt;&lt;br&gt;망설임의 어느 밤에 샛별이 유혹하네
+&lt;Sync Start=147639&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;し&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;て終わらぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=148344&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死し&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;て&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;終わらぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=148506&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死して&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;終&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;わらぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=149296&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死して終&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;わ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;らぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=149484&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死して終わ&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ら&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=150161&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死して終わら&lt;/FONT&gt;&lt;FONT color="#FF7722"&gt;ぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는
+&lt;Sync Start=150402&gt;&lt;P Class=KRCC&gt;
+&lt;FONT color="#66DDDD"&gt;死して終わらぬ&lt;/FONT&gt;&lt;br&gt;죽어도 끝나지 않는</textarea>
+            <button class="btnDevide">＞</button>
+            <textarea class="outputUpper"></textarea>
+            <textarea class="outputLower"></textarea>
+        </div>
+        <div class="tab" name="shake">
+            <textarea class="input">&lt;Sync Start=145346&gt;&lt;P Class=KRCC&gt;
+&lt;font color="#dd88ff"&gt;I believe&lt;/font&gt;
+&lt;Sync Start=148752&gt;&lt;P Class=KRCC&gt;
+&lt;font color="#dd88ff"&gt;that is where&lt;/font&gt;
+&lt;Sync Start=151446&gt;&lt;P Class=KRCC&gt;
+&lt;font color="#dd88ff"&gt;you can find&lt;/font&gt;
+&lt;Sync Start=154941&gt;&lt;P Class=KRCC&gt;
+&lt;font color="#dd88ff"&gt;whats really worth&lt;/font&gt;
+&lt;Sync Start=158102&gt;&lt;P Class=KRCC&gt;
+&amp;nbsp;</textarea>
+            <button class="btnShake">＞</button>
+            <div class="preview"></div>
             <textarea class="output"></textarea>
         </div>
-        <div class="tab" name="devide"></div>
+        <div class="tab" name="nico">
+            <div class="input">
+                <div class="width">
+                    <span>글자 수(한글)</span>
+                    <input type="number" value="20" />
+                </div>
+                <div class="lines">
+                    <div class="line">
+                        <input disabled type="text" class="line"  value="줄번호" />
+                        <input disabled type="text" class="start" value="시작" />
+                        <input disabled type="text" class="end"   value="종료" />
+                        <input disabled type="text" class="text"  value="내용" />
+                    </div>
+                    <div class="list">
+                        <div class="line">
+                            <input type="number" class="line" value="1" />
+                            <input type="number" class="start" value="2000" />
+                            <input type="number" class="end" value="5000" />
+                            <input type="text" class="text" value="테스트" />
+                            <button type="button" class="removeLine">×</button>
+                        </div>
+                        <div class="line">
+                            <input type="number" class="line" value="2" />
+                            <input type="number" class="start" value="3000" />
+                            <input type="number" class="end" value="5000" />
+                            <input type="text" class="text" value="테스트" />
+                            <button type="button" class="removeLine">×</button>
+                        </div>
+                        <div class="line">
+                            <input type="number" class="line" value="1" />
+                            <input type="number" class="start" value="3000" />
+                            <input type="number" class="end" value="4000" />
+                            <input type="text" class="text" value="테스트" />
+                            <button type="button" class="removeLine">×</button>
+                        </div>
+                    </div>
+                    <button type="button" class="addLine">＋</button>
+                </div>
+            </div>
+            <button class="btnNico">＞</button>
+            <div class="preview"></div>
+            <textarea class="output"></textarea>
+        </div>
     </div>
     <div id="addTabLayer">
         <div id="addTabMenu">
+            <!--<button type="button" name="frame">화면 싱크 맞추기</button>-->
             <button type="button" name="fillSync">중간 싱크 생성</button>
             <button type="button" name="normalizer">정규화</button>
             <button type="button" name="fusion">싱크+내용 조합</button>
             <button type="button" name="combine">겹치는 싱크 결합</button>
             <button type="button" name="devide">겹치는 싱크 분리</button>
+            <button type="button" name="nico">니코동 효과</button>
+            <button type="button" name="shake">흔들기</button>
 
             <button type="reset" id="btnCancelAddTab">취소</button>
         </div>
