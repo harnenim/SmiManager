@@ -71,7 +71,7 @@
                 var th = $(this).parents(".tab");
                 if (th.hasClass("selected")) {
                     var tabs = tab.head.find(".tab");
-                    var tabIndex = tabs.index(th);
+                    tabIndex = tabs.index(th);
                     if (tabIndex == tabs.length - 1) {
                         tabIndex--;
                     }
@@ -110,24 +110,13 @@
             });
 
             onkey.down = function (key) {
+                var MODE_NORMAL = 0;
+                var MODE_ADDTAB = 1;
+
+                var mode = MODE_NORMAL;
+                if (!tab.addTabLayer.is(":hidden")) mode = MODE_ADDTAB;
+
                 if (ctrl) {
-                    if (key > 48 && key < 57) {
-                        var index = key - 49;
-                        if (tab.addTabLayer.is(":hidden")) {
-                            tab.head.find(".tab:eq(" + index + ")").click();
-                        } else {
-                            tab.addTabLayer.find("button[type=button]:eq(" + index + ")").click();
-                        }
-                    } else {
-                        switch (key) {
-                            case 84: // Ctrl+T
-                                tab.btnAddTab.click();
-                                break;
-                            case 115: // Ctrl+F4
-                                tab.head.find(".tab.selected button.btn-close-tab").click();
-                                break;
-                        }
-                    }
                     if (alt) {
                         if (shift) {
 
@@ -135,9 +124,62 @@
 
                         }
                     } else if (shift) {
-
+                        switch (key) {
+                            case 9: // Ctrl+Shift+Tab
+                                switch (mode) {
+                                    case MODE_NORMAL: {
+                                        var th = tab.head.find(".tab.selected");
+                                        var tabs = tab.head.find(".tab");
+                                        var tabIndex = tabs.index(th);
+                                        tabIndex = (tabIndex + tabs.length - 1) % tabs.length;
+                                        tab.head.find(".tab:eq(" + tabIndex + ")").click();
+                                        break;
+                                    }
+                                }
+                                break;
+                        }
                     } else {
-
+                        if (key > 48 && key < 57) {
+                            var index = key - 49;
+                            switch (mode) {
+                                case MODE_NORMAL:
+                                    tab.head.find(".tab:eq(" + index + ")").click();
+                                    break;
+                                case MODE_ADDTAB:
+                                    tab.addTabLayer.find("button[type=button]:eq(" + index + ")").click();
+                                    break;
+                            }
+                        } else {
+                            switch (key) {
+                                case 9:  // Ctrl+Tab
+                                    switch (mode) {
+                                        case MODE_NORMAL: {
+                                            var th = tab.head.find(".tab.selected");
+                                            var tabs = tab.head.find(".tab");
+                                            var tabIndex = tabs.index(th);
+                                            tabIndex = (tabIndex + 1) % tabs.length;
+                                            tab.head.find(".tab:eq(" + tabIndex + ")").click();
+                                            break;
+                                        }
+                                    }
+                                    break;
+                                case 84: // Ctrl+T
+                                    switch (mode) {
+                                        case MODE_NORMAL:
+                                            tab.btnAddTab.click();
+                                            break;
+                                    }
+                                    break;
+                                case 87: // Ctrl+W
+                                case 115:// Ctrl+F4
+                                    switch (mode) {
+                                        case MODE_NORMAL:
+                                            tab.head.find(".tab.selected button.btn-close-tab").click();
+                                            break;
+                                    }
+                                    break;
+                            }
+                        }
                     }
                 } else if (alt) {
                     if (shift) {
