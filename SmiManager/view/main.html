@@ -66,20 +66,22 @@
                 tab.body.find("#tb" + th.attr("id").substring(2)).show();
             });
             tab.head.on("click", "button.btn-close-tab", function () {
+                var tabIndex = -1;
+
                 var th = $(this).parents(".tab");
                 if (th.hasClass("selected")) {
-                    var tabIndex = 0;
                     var tabs = tab.head.find(".tab");
                     var tabIndex = tabs.index(th);
                     if (tabIndex == tabs.length - 1) {
                         tabIndex--;
                     }
-                    if (tabIndex >= 0) {
-                        tab.head.find(".tab:eq(" + tabIndex + ")").click();
-                    }
                 }
                 tab.body.find("#tb" + th.attr("id").substring(2)).remove();
                 th.remove();
+
+                if (tabIndex >= 0) {
+                    tab.head.find(".tab:eq(" + tabIndex + ")").click();
+                }
                 return false;
             });
             $("#btnCancelAddTab").on("click", function () {
@@ -106,6 +108,81 @@
                 var lineHeight = Number(textarea.css("line-height").split("px")[0]);
                 textarea.css("height", (lineHeight * textarea.val().split("\n").length) + "px");
             });
+
+            onkey.down = function (key) {
+                if (ctrl) {
+                    if (key > 48 && key < 57) {
+                        var index = key - 49;
+                        if (tab.addTabLayer.is(":hidden")) {
+                            tab.head.find(".tab:eq(" + index + ")").click();
+                        } else {
+                            tab.addTabLayer.find("button[type=button]:eq(" + index + ")").click();
+                        }
+                    } else {
+                        switch (key) {
+                            case 84: // Ctrl+T
+                                tab.btnAddTab.click();
+                                break;
+                            case 115: // Ctrl+F4
+                                tab.head.find(".tab.selected button.btn-close-tab").click();
+                                break;
+                        }
+                    }
+                    if (alt) {
+                        if (shift) {
+
+                        } else {
+
+                        }
+                    } else if (shift) {
+
+                    } else {
+
+                    }
+                } else if (alt) {
+                    if (shift) {
+
+                    } else {
+
+                    }
+                } else if (shift) {
+
+                } else {
+                    //alert(key);
+                    switch (key) {
+                        case 27: // ESC
+                            if (!tab.addTabLayer.is(":hidden")) {
+                                $("#btnCancelAddTab").click();
+                            }
+                            break;
+                    }
+                }
+            }
+            onkey.up = function (key) {
+                if (ctrl) {
+                    if (alt) {
+                        if (shift) {
+
+                        } else {
+
+                        }
+                    } else if (shift) {
+
+                    } else {
+
+                    }
+                } else if (alt) {
+                    if (shift) {
+
+                    } else {
+
+                    }
+                } else if (shift) {
+
+                } else {
+
+                }
+            }
 
             window.onresize = function () { tab.resizeBody(); };
 

@@ -50,6 +50,11 @@ function call(names, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9) {
     return func(p0, p1, p2, p3, p4, p5, p6, p7, p8, p9);
 }
 
+var onkey = {
+        "down": function (keycode) { }
+    ,   "up"  : function (keycode) { }
+};
+
 $(function () {
     var doc = $(document);
     var views = $(".view");
@@ -63,15 +68,23 @@ $(function () {
             case 17: ctrl  = true; break;
             case 18: alt   = true; break;
             case 116: return false; // F5 새로고침 방지
+            default: return false;
         }
     };
     window.onkeyup = function() {
         switch(event.keyCode) {
             case 16: shift = false; break;
             case 17: ctrl  = false; break;
-            case 18: alt   = false; break;
+            case 18: alt = false; break;
+            default: return false;
         }
     };
+    $(document).on("keydown", function (e) {
+        onkey.down(e.keyCode);
+    });
+    $(document).on("keyup", function (e) {
+        onkey.up(e.keyCode);
+    });
     window.onmousewheel = function () {
         // 확대/축소 방지
         if (ctrl) {

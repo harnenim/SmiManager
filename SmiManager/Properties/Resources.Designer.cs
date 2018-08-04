@@ -59,36 +59,5 @@ namespace SmiManager.Properties {
                 resourceCulture = value;
             }
         }
-        
-        /// <summary>
-        ///   &lt;!doctype html&gt;
-        ///&lt;html&gt;
-        ///&lt;head&gt;
-        ///    &lt;meta charset=&quot;utf-8&quot; /&gt;
-        ///    &lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=edge&quot; /&gt;
-        ///    &lt;title&gt;Replacer&lt;/title&gt;
-        ///    &lt;script src=&quot;js/jquery-3.2.1.min.js&quot;&gt;&lt;/script&gt;
-        ///    &lt;script src=&quot;js/common.js&quot;&gt;&lt;/script&gt;
-        ///    &lt;script src=&quot;js/listview.js&quot;&gt;&lt;/script&gt;
-        ///    &lt;script&gt;
-        ///$(function() {
-        ///	selectView(0);
-        ///});
-        ///function selectView(index) {
-        ///	$(&quot;.view&quot;).hide();
-        ///	$(&quot;.view:eq(&quot;+index+&quot;)&quot;).show();
-        ///}
-        ///
-        ///var listFile;
-        ///$(function() {
-        ///	listFile = $(&quot;#listFile&quot;);
-        ///
-        ///	listFile.on(&quot;dr[나머지 문자열은 잘림]&quot;;과(와) 유사한 지역화된 문자열을 찾습니다.
-        /// </summary>
-        internal static string main {
-            get {
-                return ResourceManager.GetString("main", resourceCulture);
-            }
-        }
     }
 }
