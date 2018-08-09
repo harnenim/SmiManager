@@ -162,14 +162,14 @@
                                             break;
                                         }
                                     }
-                                    break;
+                                    return false;
                                 case 84: // Ctrl+T
                                     switch (mode) {
                                         case MODE_NORMAL:
                                             tab.btnAddTab.click();
                                             break;
                                     }
-                                    break;
+                                    return false;
                                 case 87: // Ctrl+W
                                 case 115:// Ctrl+F4
                                     switch (mode) {
@@ -177,7 +177,7 @@
                                             tab.head.find(".tab.selected button.btn-close-tab").click();
                                             break;
                                     }
-                                    break;
+                                    return false;
                             }
                         }
                     }
@@ -196,9 +196,10 @@
                             if (!tab.addTabLayer.is(":hidden")) {
                                 $("#btnCancelAddTab").click();
                             }
-                            break;
+                            return false;
                     }
                 }
+                return true;
             }
             onkey.up = function (key) {
                 if (ctrl) {
@@ -224,6 +225,7 @@
                 } else {
 
                 }
+                return true;
             }
 
             window.onresize = function () { tab.resizeBody(); };
