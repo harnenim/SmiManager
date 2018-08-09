@@ -19,4 +19,8 @@ Smi 자막 하면서 쓸만한 몇몇 기능 만지작
 
 
 
-근데 탭 이름 수정을 넣어야 하나 음...
+근데 탭 이름 수정 기능을 넣어야 하나 음...
+
+
+dll 중에 WebForm.dll은 이거임
+https://github.com/harnenim/Text-Replacer/tree/master/WebForm
