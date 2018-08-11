@@ -98,14 +98,14 @@ namespace SmiManager
             for (int i = 0; i < width; i++)
                 defaultValue += "　";
             NicoLine.lineWidth = Smi.GetLineWidth(defaultValue);
-
+            
             List<Smi> output = new List<Smi>();
             for (int frame = startFrame; frame < endFrame; frame++)
             {
                 Smi smi = new Smi()
                 {
                     start = (int)(frame * FRAME_LENGTH),
-                    syncType = (frame == startFrame ? Smi.SyncType.frame : Smi.SyncType.inner),
+                    syncType = (frame == startFrame ? SyncType.frame : SyncType.inner),
                     text = "​"
                 };
                 for (int i = 0; i < lineCount; i++)
@@ -150,7 +150,7 @@ namespace SmiManager
             output.Add(new Smi()
             {
                 start = (int)(endFrame * FRAME_LENGTH),
-                syncType = Smi.SyncType.frame,
+                syncType = SyncType.frame,
                 text = "&nbsp;"
             });
 

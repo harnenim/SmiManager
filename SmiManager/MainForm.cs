@@ -34,19 +34,21 @@ namespace SmiManager
 
         public void FillSync(string id)
         {
-            List<Smi> smis = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " > textarea.input" })).body;
-            Smi.FillEmptySync(smis);
-            SetPreview(id, smis, 100);
-            string output = new SmiFile() { body = smis }.ToTxt();
+            //List<Smi> input = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " > textarea.input" })).body;
+            List<Smi> input = new SmiFile().FromTxt(Script("$val", new object[] { "#" + id + " > textarea.input" })).body;
+            Smi.FillEmptySync(input);
+            SetPreview(id, input, 100);
+            string output = new SmiFile() { body = input }.ToTxt();
             Script("$val", new object[] { "#" + id + " > textarea.output", output });
         }
 
         public void Normalize(string id)
         {
-            List<Smi> smis = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " > textarea.input" })).body;
-            Smi.Normalize(smis);
-            SetPreview(id, smis, 100);
-            string output = new SmiFile() { body = smis }.ToTxt();
+            //List<Smi> input = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " > textarea.input" })).body;
+            List<Smi> input = new SmiFile().FromTxt(Script("$val", new object[] { "#" + id + " > textarea.input" })).body;
+            Smi.Normalize(input);
+            SetPreview(id, input, 100);
+            string output = new SmiFile() { body = input }.ToTxt();
             Script("$val", new object[] { "#" + id + " > textarea.output", output });
         }
 
@@ -63,8 +65,10 @@ namespace SmiManager
 
         public void Combine(string id)
         {
-            List<Smi> inputUpper = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " textarea.inputUpper" })).body;
-            List<Smi> inputLower = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " textarea.inputLower" })).body;
+            //List<Smi> inputUpper = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " textarea.inputUpper" })).body;
+            //List<Smi> inputLower = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " textarea.inputLower" })).body;
+            List<Smi> inputUpper = new SmiFile().FromTxt(Script("$val", new object[] { "#" + id + " textarea.inputUpper" })).body;
+            List<Smi> inputLower = new SmiFile().FromTxt(Script("$val", new object[] { "#" + id + " textarea.inputLower" })).body;
             List<Smi> result = Combiner.Combine(inputUpper, inputLower);
             SetPreview(id, result, 100);
             string output = new SmiFile() { body = result }.ToTxt();
@@ -73,7 +77,8 @@ namespace SmiManager
 
         public void Devide(string id)
         {
-            List<Smi> input = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " textarea.input" })).body;
+            //List<Smi> input = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " > textarea.input" })).body;
+            List<Smi> input = new SmiFile().FromTxt(Script("$val", new object[] { "#" + id + " > textarea.input" })).body;
             Tuple<List<Smi>, List<Smi>> result = Devider.Devide(input);
             Script("$val", new object[] { "#" + id + " > textarea.outputUpper", Smi.Smi2txt(result.Item1) });
             Script("$val", new object[] { "#" + id + " > textarea.outputLower", Smi.Smi2txt(result.Item2) });
@@ -81,7 +86,8 @@ namespace SmiManager
 
         public void Shake(string id)
         {
-            List<Smi> input = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " textarea.input" })).body;
+            //List<Smi> input = SmiFile.FromTxt(Script("$val", new object[] { "#" + id + " > textarea.input" })).body;
+            List<Smi> input = new SmiFile().FromTxt(Script("$val", new object[] { "#" + id + " > textarea.input" })).body;
             List<Smi> result = Shaker.Shake(input);
             SetPreview(id, result);
             Script("$val", new object[] { "#" + id + " > textarea.output", Smi.Smi2txt(result) });
@@ -128,9 +134,11 @@ namespace SmiManager
             List<string> previews = new List<string>();
             foreach (Smi smi in smis)
             {
-                List<Converter.Span> spans = Converter.Span.FromSmi(smi.text);
-                string html = Converter.Span.ToHtml(spans);
-                Console.WriteLine(html);
+                //List<Converter.Span> spans = Converter.Span.FromSmi(smi.text);
+                //string html = Converter.Span.ToHtml(spans);
+                List<Attr> attrs = smi.ToAttr();
+                string html = Attr.ToHtml(attrs);
+                //Console.WriteLine(html);
                 previews.Add(html);
             }
             string json = JsonConvert.SerializeObject(previews);

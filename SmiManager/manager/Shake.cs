@@ -74,7 +74,7 @@ namespace SmiManager
                         output.Add(new Smi()
                         {
                             start = (start * (frames - frame) + end * frame) / frames,
-                            syncType = (frame == 0 ? smi.syncType : Smi.SyncType.inner),
+                            syncType = (frame == 0 ? smi.syncType : SyncType.inner),
                             text = lines.ToSmi(phase++)
                         });
                     }

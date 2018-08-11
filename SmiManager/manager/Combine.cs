@@ -8,7 +8,7 @@ namespace SmiManager
         public class Combined
         {
             public int start = 0;
-            public Smi.SyncType syncType = Smi.SyncType.normal;
+            public SyncType syncType = SyncType.normal;
             public string[] upper = new string[] { };
             public string[] lower = new string[] { };
             public static string[] ToLines(string smi)
@@ -92,7 +92,7 @@ namespace SmiManager
                     lastGroup.combineds.Add((last = new Combined()
                     {
                         start = uLine.start,
-                        syncType = (uLine.syncType == Smi.SyncType.frame || lLine.syncType == Smi.SyncType.frame) ? Smi.SyncType.frame : Smi.SyncType.normal,
+                        syncType = (uLine.syncType == SyncType.frame || lLine.syncType == SyncType.frame) ? SyncType.frame : SyncType.normal,
                         upper = uLine.text.Replace("&nbsp;", "").Length == 0 ? new string[] { } : Combined.ToLines(uLine.text),
                         lower = lLine.text.Replace("&nbsp;", "").Length == 0 ? new string[] { } : Combined.ToLines(lLine.text)
                     }));
@@ -170,7 +170,8 @@ namespace SmiManager
                     {
                         if (maxUpperWidth > maxLowerWidth)
                         {
-                            string left = Smi.GetLineAppend(combined.lower[maxLowerIndex], maxUpperWidth, true);
+                            //string left = Smi.GetLineAppend(combined.lower[maxLowerIndex], maxUpperWidth, true);
+                            string left = Width.GetAppend(Smi.GetLineWidth(combined.lower[maxLowerIndex]), maxUpperWidth, true);
                             if (left.Length > 0)
                             {
                                 string right = Width.AppendToRight(left);
@@ -181,7 +182,8 @@ namespace SmiManager
                         }
                         else
                         {
-                            string left = Smi.GetLineAppend(combined.upper[maxUpperIndex], maxLowerWidth, true);
+                            //string left = Smi.GetLineAppend(combined.upper[maxUpperIndex], maxLowerWidth, true);
+                            string left = Width.GetAppend(Smi.GetLineWidth(combined.upper[maxUpperIndex]), maxLowerWidth, true);
                             if (left.Length > 0)
                             {
                                 string right = Width.AppendToRight(left);

@@ -77,7 +77,7 @@ namespace SmiManager
         private class SmiPadding
         {
             public int start = 0;
-            public Smi.SyncType syncType = Smi.SyncType.normal;
+            public SyncType syncType = SyncType.normal;
             public LinePadding[] lines = new LinePadding[] { };
 
             public SmiPadding(Smi smi)
